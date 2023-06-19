@@ -77,13 +77,18 @@ async function generateJWT(
           id: userInfo.sub,
           name: userInfo.preferred_username || "",
           email: userInfo.email || "",
-          lobby_bypass: true,
+          lobby_bypass: userInfo.lobby_bypass || "",
+          affiliation: userInfo.affiliation || "",
         },
+	features: {
+          "screen-sharing": "userInfo.screen-sharing" || "",
+	},
       },
     };
 
     return await create(header, payload, cryptoKey);
-  } catch {
+  } catch (error) {
+    if (DEBUG) console.log(error.message);
     return undefined;
   }
 }
