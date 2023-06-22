@@ -46,9 +46,7 @@ function unauthorized(): Response {
 // ----------------------------------------------------------------------------
 // Generate JWT (Jitsi token)
 // ----------------------------------------------------------------------------
-async function generateJWT(
-  userInfo: Record<string, unknown>,
-): Promise<string> {
+async function generateJWT(userInfo: Record<string, unknown>): Promise<string> {
   try {
     const encoder = new TextEncoder();
     const keyData = encoder.encode(JWT_APP_SECRET);
@@ -60,7 +58,7 @@ async function generateJWT(
         hash: JWT_HASH,
       },
       true,
-      ["sign", "verify"],
+      ["sign", "verify"]
     );
 
     const header = { alg: JWT_ALG, typ: "JWT" };
@@ -80,9 +78,12 @@ async function generateJWT(
           lobby_bypass: userInfo.lobby_bypass || "",
           affiliation: userInfo.affiliation || "",
         },
-	features: {
+        features: {
           "screen-sharing": "userInfo.screen-sharing" || "",
-	},
+          recording: userInfo.recording || "",
+          livestreaming: userInfo.livestreaming || "",
+          "sip-outbound-call": "userInfo.sip-outbound-call" || "",
+        },
       },
     };
 
@@ -105,15 +106,16 @@ async function getToken(
   code: string,
   path: string,
   search: string,
-  hash: string,
+  hash: string
 ): Promise<string> {
-  const url = `${KEYCLOAK_ORIGIN}/realms/${KEYCLOAK_REALM}` +
+  const url =
+    `${KEYCLOAK_ORIGIN}/realms/${KEYCLOAK_REALM}` +
     `/protocol/openid-connect/token`;
-  const bundle = `path=${encodeURIComponent(path)}` +
+  const bundle =
+    `path=${encodeURIComponent(path)}` +
     `&search=${encodeURIComponent(search)}` +
     `&hash=${encodeURIComponent(hash)}`;
-  const redirectURI = `https://${host}/static/oidc-adapter.html` +
-    `?${bundle}`;
+  const redirectURI = `https://${host}/static/oidc-adapter.html` + `?${bundle}`;
   const data = new URLSearchParams();
   data.append("client_id", KEYCLOAK_CLIENT_ID);
   data.append("grant_type", "authorization_code");
@@ -126,7 +128,7 @@ async function getToken(
   try {
     const res = await fetch(url, {
       headers: {
-        "Accept": "application/json",
+        Accept: "application/json",
       },
       method: "POST",
       body: data,
@@ -137,10 +139,11 @@ async function getToken(
     if (DEBUG) console.log(`getToken json:`);
     if (DEBUG) console.log(json);
 
-    if (!token) throw ("cannot get Keycloak token");
+    if (!token) throw "cannot get Keycloak token";
 
     return token;
-  } catch {
+  } catch (error) {
+    if (DEBUG) console.log(error.message);
     return undefined;
   }
 }
@@ -150,12 +153,13 @@ async function getToken(
 // ----------------------------------------------------------------------------
 async function getUserInfo(token: string): Promise<Record<string, unknown>> {
   try {
-    const url = `${KEYCLOAK_ORIGIN}/realms/${KEYCLOAK_REALM}` +
+    const url =
+      `${KEYCLOAK_ORIGIN}/realms/${KEYCLOAK_REALM}` +
       `/protocol/openid-connect/userinfo`;
     const res = await fetch(url, {
       headers: {
-        "Accept": "application/json",
-        "Authorization": `Bearer ${token}`,
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
       },
       method: "POST",
     });
@@ -165,10 +169,11 @@ async function getUserInfo(token: string): Promise<Record<string, unknown>> {
     if (DEBUG) console.log(userInfo);
 
     // sub is the mandotary field for successful request
-    if (!userInfo.sub) throw ("no user info");
+    if (!userInfo.sub) throw "no user info";
 
     return await userInfo;
-  } catch {
+  } catch (error) {
+    if (DEBUG) console.log(error.message);
     return undefined;
   }
 }
@@ -222,12 +227,14 @@ function oidcRedirectForCode(req: Request, prompt: string): Response {
   const search = qs.get("search") || "";
   const hash = qs.get("hash") || "";
 
-  if (!path) throw ("missing path");
+  if (!path) throw "missing path";
 
-  const bundle = `path=${encodeURIComponent(path)}` +
+  const bundle =
+    `path=${encodeURIComponent(path)}` +
     `&search=${encodeURIComponent(search)}` +
     `&hash=${encodeURIComponent(hash)}`;
-  const target = `${KEYCLOAK_ORIGIN}/realms/${KEYCLOAK_REALM}` +
+  const target =
+    `${KEYCLOAK_ORIGIN}/realms/${KEYCLOAK_REALM}` +
     `/protocol/openid-connect/auth?client_id=${KEYCLOAK_CLIENT_ID}` +
     `&response_mode=${KEYCLOAK_MODE}&response_type=code&scope=openid` +
     `&prompt=${prompt}&redirect_uri=https://${host}/static/oidc-adapter.html` +
